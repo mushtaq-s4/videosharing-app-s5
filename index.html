@@ -1,0 +1,478 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <title>video sharing website</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    :root{
+      --bg1: #f0f7ff;        /* light blue */
+      --bg2: #ffeef7;        /* light pink */
+      --card-bg: #ffffff;
+      --border: #d9e4ff;
+      --text: #1f2a44;
+      --muted: #6b7a90;
+      --accent1: #8ec5ff;
+      --accent2: #ffb3d6;
+      --btn: linear-gradient(135deg, #8ec5ff, #ffb3d6);
+      --titlebar: #0b2f6d;   /* dark blue bar */
+      --footer-bg: #0b2f6d;
+      --footer-text: #ffffff;
+    }
+    * { box-sizing: border-box; }
+    html, body { height: 100%; }
+    body {
+      display: flex; flex-direction: column; min-height: 100vh;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      color: var(--text);
+      background: radial-gradient(1200px 800px at 0% 0%, var(--bg1), transparent),
+                  radial-gradient(1200px 800px at 100% 0%, var(--bg2), transparent),
+                  #f9fbff;
+      margin: 0;
+    }
+    .page {
+      flex: 1;
+      max-width: 1100px; margin: 24px auto; padding: 0 16px;
+      width: 100%;
+    }
+    .titlebar {
+      background: var(--titlebar);
+      color: #fff;
+      text-align: center;
+      padding: 14px;
+      border-radius: 14px;
+      box-shadow: 0 6px 20px rgba(11,47,109,.25);
+      margin-bottom: 14px;
+    }
+    .titlebar h1 { margin: 0; font-weight: 800; letter-spacing: .3px; color:#fff; }
+    #grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(360px,1fr)); gap: 16px; }
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      padding: 12px; border-radius: 14px;
+      box-shadow: 0 6px 20px rgba(31,42,68,.08);
+    }
+    small.mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; color: var(--muted); }
+    label { display:block; margin: 6px 0 6px; font-weight:600; }
+    input, button, textarea, select {
+      padding: 10px 12px; border: 1px solid var(--border); border-radius: 10px; background: #fff; color: var(--text);
+    }
+    input, textarea, select { width: 100%; }
+    button { cursor: pointer; background: var(--btn); color: #122; border: 0; font-weight: 700; }
+    button.ghost { background: transparent; border: 1px solid var(--border); }
+    .row { display:grid; grid-template-columns: 1fr auto auto; gap: 8px; align-items:center; }
+    .flex { display:flex; gap:10px; align-items:center; flex-wrap: wrap; }
+    .pill { display:inline-block; padding: 4px 10px; border-radius: 999px; background:#f2f6ff; border:1px solid var(--border); font-size:12px; color:#3a4a70; }
+    .muted { color: var(--muted); }
+    .section { border:1px dashed var(--border); padding:12px; border-radius:12px; margin: 12px 0; background: #ffffffc0; }
+    .danger { background:#ffecec; border-color:#ffb3b3; }
+    .player-wrap { position: relative; border-radius: 12px; overflow: hidden; border:1px solid var(--border); }
+    iframe.yt-frame { width: 100%; height: 220px; background: #000; border:0; display:block; }
+    .sharebar { display:flex; gap:8px; margin-top:10px; }
+    .sharebar a { text-decoration:none; padding:8px 10px; border-radius: 10px; border:1px solid var(--border); background:#fff; color:#1f2a44; font-size: 13px; }
+    .sharebar a:hover { border-color:#aac6ff; }
+    .provider { margin-top: 8px; }
+
+    footer.footer {
+      background: var(--footer-bg);
+      color: var(--footer-text);
+      text-align: center;
+      padding: 12px 16px;
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <div class="titlebar">
+      <h1>video sharing website</h1>
+    </div>
+    <p class="mono" style="margin:0 0 10px 0;"><small>Welcome! Browse, share, and discuss your favorite cricket highlights—all in one place.</small></p>
+
+    <div class="section">
+      <div class="flex" style="align-items:flex-end;">
+        <div style="flex:1">
+          <label>Email</label>
+          <input id="email" placeholder="email (e.g., creator@example.com)">
+        </div>
+        <div style="flex:1">
+          <label>Password</label>
+          <input id="password" type="password" placeholder="password (e.g., pass123)">
+        </div>
+        <div>
+          <button onclick="register()">Register (consumer)</button>
+        </div>
+        <div>
+          <button onclick="login()">Login</button>
+        </div>
+        <div>
+          <button class="ghost" onclick="logout()">Logout</button>
+        </div>
+        <span id="loginStatus" class="pill">Not logged in</span>
+      </div>
+      <div class="muted" style="margin-top:6px;">
+        Seeded accounts: <b>creator@example.com / pass123</b> (creator) and <b>user@example.com / pass123</b> (consumer)
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="flex">
+        <div style="flex:1">
+          <label>Search Title</label>
+          <input id="q" placeholder="e.g., India Pakistan">
+        </div>
+        <div>
+          <button onclick="loadVideos()">Search</button>
+          <button class="ghost" onclick="resetSearch()">Reset</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="addSection" class="section" style="display:none;">
+      <h3>Add video (creator only)</h3>
+      <div class="flex">
+        <div style="flex:2">
+          <label>Title</label>
+          <input id="title" placeholder="Video title">
+        </div>
+        <div style="flex:1">
+          <label>Genre</label>
+          <input id="genre" placeholder="e.g., Cricket">
+        </div>
+        <div style="flex:1">
+          <label>Age Rating</label>
+          <input id="age" placeholder="e.g., G">
+        </div>
+      </div>
+      <div class="flex" style="margin-top:8px;">
+        <div style="flex:1">
+          <label>YouTube URL</label>
+          <input id="youtube" placeholder="https://www.youtube.com/watch?v=...">
+        </div>
+        <div>
+          <button onclick="addVideo()">Add</button>
+        </div>
+      </div>
+    </div>
+
+    <h3 style="margin-top:20px;">Videos</h3>
+    <div id="grid"></div>
+
+    <div class="section danger" style="margin-top:20px;">
+      <b>Reset (optional):</b> Clears all local data (users, videos, comments, ratings). <button onclick="resetAll()">Reset Data</button>
+    </div>
+  </div>
+
+  <footer class="footer">© 2025 . All rights reserved.</footer>
+
+  <script>
+// === Local "DB" in localStorage ===
+const KEY = "yt_static_app_data_v3i_footer";
+const KEY_USER = "yt_static_app_current_user_v3i_footer";
+
+function nowISO(){ return new Date().toISOString(); }
+
+function loadDB(){
+  const raw = localStorage.getItem(KEY);
+  if(raw){
+    try { return JSON.parse(raw); } catch(e){}
+  }
+  // Seed fresh DB
+  const db = {
+    users: [], nextUserId: 1,
+    videos: [], nextVideoId: 1,
+    comments: [], nextCommentId: 1,
+    ratings: [], nextRatingId: 1
+  };
+  // seed users
+  const creator = { id: db.nextUserId++, email: "creator@example.com", password: "pass123", role: "creator", created_at: nowISO() };
+  const user = { id: db.nextUserId++, email: "user@example.com", password: "pass123", role: "consumer", created_at: nowISO() };
+  db.users.push(creator, user);
+  // seed videos (exactly two)
+  seedVideo(db, "India vs Pakistan | Karachi Match Highlights | India Hold Nerve in a Record-Breaking Thriller!", "QXhDbZ9tE_I", creator.id, "Cricket", "G");
+  seedVideo(db, "Australia v India 2024-25 | Fourth Test | Day Four", "6cSUNTgJdrw", creator.id, "Cricket", "G");
+  saveDB(db);
+  return db;
+}
+function saveDB(db){ localStorage.setItem(KEY, JSON.stringify(db)); }
+
+function seedVideo(db, title, youtube_id, owner_id, genre, age_rating){
+  db.videos.push({ id: db.nextVideoId++, title, genre, age_rating, youtube_id, owner_id, created_at: nowISO() });
+}
+
+function getCurrentUser(){
+  const id = parseInt(localStorage.getItem(KEY_USER) || "0", 10);
+  if(!id) return null;
+  const u = db.users.find(u => u.id === id);
+  return u || null;
+}
+
+function setCurrentUser(u){
+  if(!u){ localStorage.removeItem(KEY_USER); return; }
+  localStorage.setItem(KEY_USER, String(u.id));
+}
+
+// === Seed/load ===
+let db = loadDB();
+let currentUser = getCurrentUser();
+updateAuthUI();
+
+// === Auth ===
+function register(){
+  const email = document.getElementById("email").value.trim();
+  const password = document.getElementById("password").value;
+  if(!email || !password){ alert("Enter email & password"); return; }
+  if(db.users.some(u => u.email.toLowerCase() === email.toLowerCase())){
+    alert("Email already registered");
+    return;
+  }
+  const u = { id: db.nextUserId++, email, password, role: "consumer", created_at: nowISO() };
+  db.users.push(u); saveDB(db);
+  alert("Registered as consumer");
+}
+
+function login(){
+  const email = document.getElementById("email").value.trim();
+  const password = document.getElementById("password").value;
+  const u = db.users.find(u => u.email.toLowerCase() === email.toLowerCase() && u.password === password);
+  if(!u){ alert("Invalid credentials"); return; }
+  currentUser = u; setCurrentUser(u);
+  updateAuthUI();
+  alert("Logged in");
+}
+
+function logout(){
+  currentUser = null; setCurrentUser(null); updateAuthUI();
+}
+
+function updateAuthUI(){
+  const status = document.getElementById("loginStatus");
+  if(currentUser){
+    status.textContent = `Logged in as ${currentUser.email} (${currentUser.role})`;
+  } else {
+    status.textContent = "Not logged in";
+  }
+  document.getElementById("addSection").style.display = (currentUser && currentUser.role === "creator") ? "block" : "none";
+}
+
+// === Videos ===
+function extractYouTubeId(url){
+  try{
+    const u = new URL(url);
+    const host = (u.hostname || "").toLowerCase();
+    if(host === "www.youtube.com" || host === "youtube.com"){
+      const v = u.searchParams.get("v");
+      if(v) return v;
+      const m = u.pathname.match(/\/(embed|shorts)\/([\w-]{6,})/);
+      if(m) return m[2];
+    }
+    if(host === "youtu.be"){
+      const part = u.pathname.replace(/^\//,"");
+      return part || null;
+    }
+  }catch(e){}
+  return null;
+}
+
+function addVideo(){
+  if(!currentUser || currentUser.role !== "creator"){ alert("Login as creator"); return; }
+  const title = document.getElementById("title").value.trim();
+  const genre = document.getElementById("genre").value.trim() || null;
+  const age = document.getElementById("age").value.trim() || null;
+  const youtubeURL = document.getElementById("youtube").value.trim();
+  if(!title || !youtubeURL){ alert("Title & URL required"); return; }
+  const vid = extractYouTubeId(youtubeURL);
+  if(!vid){ alert("Invalid YouTube URL"); return; }
+  db.videos.push({ id: db.nextVideoId++, title, genre, age_rating: age, youtube_id: vid, owner_id: currentUser.id, created_at: nowISO() });
+  saveDB(db);
+  document.getElementById("title").value = "";
+  document.getElementById("genre").value = "";
+  document.getElementById("age").value = "";
+  document.getElementById("youtube").value = "";
+  loadVideos();
+  alert("Video added");
+}
+
+// === Providers (keep, to avoid new tab behavior in some cases) ===
+const PROVIDERS = [
+  { key: "yt",   name: "YouTube",           base: "https://www.youtube.com/embed/" },
+  { key: "noc",  name: "YouTube (no-cookie)", base: "https://www.youtube-nocookie.com/embed/" },
+  { key: "piped",name: "Piped",             base: "https://piped.video/embed/" },
+  { key: "yewtu",name: "Yewtu",             base: "https://yewtu.be/embed/" }
+];
+
+function makeEmbed(base, vid){
+  return base + vid + "?rel=0&modestbranding=1&playsinline=1";
+}
+
+function changeProvider(videoId){
+  const sel = document.getElementById("prov-" + videoId);
+  const prov = sel.value;
+  const v = db.videos.find(x => x.id === videoId);
+  if(!v) return;
+  const p = PROVIDERS.find(p => p.key === prov) || PROVIDERS[0];
+  const src = makeEmbed(p.base, v.youtube_id);
+  const frame = document.getElementById("frame-" + videoId);
+  if(frame){ frame.src = src; }
+}
+
+function shareURL(vid){
+  return "https://www.youtube.com/watch?v=" + encodeURIComponent(vid);
+}
+
+function cardHTML(v){
+  const yurl = shareURL(v.youtube_id);
+  const text = encodeURIComponent(v.title);
+  const fb = "https://www.facebook.com/sharer/sharer.php?u=" + encodeURIComponent(yurl);
+  const tw = "https://twitter.com/intent/tweet?url=" + encodeURIComponent(yurl) + "&text=" + text;
+  const li = "https://www.linkedin.com/sharing/share-offsite/?url=" + encodeURIComponent(yurl);
+
+  const defaultSrc = makeEmbed(PROVIDERS[0].base, v.youtube_id);
+  const provOptions = PROVIDERS.map(p => `<option value="${p.key}">${p.name}</option>`).join("");
+
+  return `
+  <div class="card" id="card-${v.id}">
+    <h3>${escapeHTML(v.title)}</h3>
+    <p class="muted">${v.genre ? `<span class="pill">${escapeHTML(v.genre)}</span>` : ""} ${v.age_rating ? `<span class="pill">${escapeHTML(v.age_rating)}</span>` : ""}</p>
+    <div class="player-wrap">
+      <iframe id="frame-${v.id}" class="yt-frame"
+        src="${defaultSrc}"
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+        allowfullscreen></iframe>
+    </div>
+
+    <div class="provider">
+      <label for="prov-${v.id}">Embed provider:</label>
+      <select id="prov-${v.id}" onchange="changeProvider(${v.id})">
+        ${provOptions}
+      </select>
+      <small class="muted">If “YouTube” opens a new tab, try “Piped” or “Yewtu”.</small>
+    </div>
+
+    <div class="sharebar">
+      <a href="${fb}" target="_blank" rel="noopener">Share Facebook</a>
+      <a href="${li}" target="_blank" rel="noopener">Share LinkedIn</a>
+      <a href="${tw}" target="_blank" rel="noopener">Share Twitter</a>
+    </div>
+
+    <div class="flex" style="margin-top:10px;">
+      <div style="flex:1; min-width:160px;">
+        <label>Rate (1–5)</label>
+        <select id="rate-${v.id}">
+          <option value="1">1</option>
+          <option value="2">2</option>
+          <option value="3" selected>3</option>
+          <option value="4">4</option>
+          <option value="5">5</option>
+        </select>
+      </div>
+      <div>
+        <button onclick="postRating(${v.id})">Submit Rating</button>
+      </div>
+      <div id="summary-${v.id}" class="muted" style="min-width:160px;"><small>Average: —</small></div>
+    </div>
+    <div style="margin-top:10px;">
+      <label>Add comment</label>
+      <textarea id="cmt-${v.id}" rows="2" placeholder="Write a comment"></textarea>
+      <div class="flex" style="grid-template-columns: auto auto; justify-content: flex-start;">
+        <button onclick="postComment(${v.id})">Post Comment</button>
+      </div>
+    </div>
+    <div id="comments-${v.id}" style="margin-top:8px;">
+      <small class="muted">No comments yet</small>
+    </div>
+  </div>`;
+}
+
+function loadVideos(){
+  const q = document.getElementById("q").value.trim().toLowerCase();
+  let items = db.videos.slice().sort((a,b)=>b.id-a.id);
+  if(q) items = items.filter(v => v.title.toLowerCase().includes(q));
+  const grid = document.getElementById("grid");
+  grid.innerHTML = items.map(v => cardHTML(v)).join("");
+  items.forEach(v => {
+    updateSummary(v.id);
+    renderComments(v.id);
+  });
+}
+
+function resetSearch(){
+  document.getElementById("q").value = "";
+  loadVideos();
+}
+
+// === Ratings & Comments (local) ===
+function postRating(videoId){
+  if(!currentUser){ alert("Login first"); return; }
+  const score = parseInt(document.getElementById(`rate-${videoId}`).value, 10);
+  if(isNaN(score) || score<1 || score>5){ alert("Score must be 1..5"); return; }
+  // upsert
+  const existing = db.ratings.find(r => r.video_id===videoId && r.user_id===currentUser.id);
+  if(existing){
+    existing.score = score;
+    existing.created_at = nowISO();
+  }else{
+    db.ratings.push({ id: db.nextRatingId++, video_id: videoId, user_id: currentUser.id, score, created_at: nowISO() });
+  }
+  saveDB(db);
+  updateSummary(videoId);
+  alert("Rating saved");
+}
+
+function updateSummary(videoId){
+  const stats = db.ratings.filter(r => r.video_id===videoId);
+  const el = document.getElementById(`summary-${videoId}`);
+  if(stats.length===0){
+    el.innerHTML = `<small>Average: — (0 ratings)</small>`;
+    return;
+  }
+  const avg = (stats.reduce((s,r)=>s+r.score,0)/stats.length).toFixed(2);
+  el.innerHTML = `<small>Average: <b>${avg}</b> (${stats.length} ratings)</small>`;
+}
+
+function postComment(videoId){
+  if(!currentUser){ alert("Login first"); return; }
+  const ta = document.getElementById(`cmt-${videoId}`);
+  const body = (ta.value||"").trim();
+  if(!body){ alert("Write something"); return; }
+  db.comments.push({ id: db.nextCommentId++, video_id: videoId, user_id: currentUser.id, body, created_at: nowISO() });
+  saveDB(db);
+  ta.value = "";
+  renderComments(videoId);
+}
+
+function renderComments(videoId){
+  const el = document.getElementById(`comments-${videoId}`);
+  const items = db.comments.filter(c => c.video_id===videoId).sort((a,b)=>b.id-a.id);
+  if(items.length===0){ el.innerHTML = `<small class="muted">No comments yet</small>`; return; }
+  el.innerHTML = items.map(c => {
+    const u = db.users.find(u => u.id===c.user_id);
+    const who = u ? u.email : "user#"+c.user_id;
+    return `<p><small class="muted">${escapeHTML(who)} • ${escapeHTML(c.created_at)}</small><br>${escapeHTML(c.body)}</p>`;
+  }).join("");
+}
+
+// === Reset ===
+function resetAll(){
+  if(confirm("This will clear all local data (users, videos, comments, ratings). Continue?")){
+    localStorage.removeItem(KEY);
+    localStorage.removeItem(KEY_USER);
+    db = loadDB();
+    currentUser = getCurrentUser();
+    updateAuthUI();
+    loadVideos();
+  }
+}
+
+// === Helpers ===
+function escapeHTML(s){
+  return String(s).replace(/[&<>"']/g, c => ({
+    "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"
+  }[c]));
+}
+
+// First render
+loadVideos();
+  </script>
+</body>
+</html>
